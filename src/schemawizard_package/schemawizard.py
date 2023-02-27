@@ -1,6 +1,7 @@
 """
   Dave Skura, 2023
 """
+from datetime import *
 import os
 import sys
 
@@ -90,20 +91,27 @@ class schemawiz:
 				sys.exit(0)
 
 	def get_just_filename(self):
+		justfilename=''
 		if self.csvfilename.find('\\') > -1: # have a path and dirs
 			fileparts = self.csvfilename.split('\\')
 			justfilename = fileparts[len(fileparts)-1]
 		else:
-			if self.csvfilename == '':
-				justfilename = 'sampletable'
-			else:
+			if self.csvfilename != '':
 				justfilename = self.csvfilename
 
 		return justfilename
 
 	def gettablename(self):
 
-		return self.get_just_filename().replace('.','_')
+		now = (datetime.now())
+		tbl_prefix= 'tblcsv_' + str(now.year) + ('0' + str(now.month))[-2:] + str(now.day) + str(now.hour) + str(now.minute) 
+		known_tablename = self.get_just_filename().replace('.','_')
+		if known_tablename =='':
+			fulltablename = tbl_prefix + self.get_just_filename().replace('.','_')
+		else:
+			fulltablename = self.get_just_filename().replace('.','_')
+
+		return fulltablename
 
 	def count_chars(self,data,exceptchars=''):
 		chars_in_hdr = {}
@@ -397,13 +405,13 @@ if __name__ == '__main__':
 	
 	#obj.loadcsvfile(csvfilename)
 
-	print('/* MySQL DDL - BEGIN ----- schemawiz(csvfilename).guess_mysql_ddl() ----- */ \n')
-	print(obj.guess_mysql_ddl())
-	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
-
 	print('/* Postgres DDL - BEGIN ----- schemawiz(csvfilename).guess_postgres_ddl() ----- */ \n')
 	print(obj.guess_postgres_ddl())
 	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
+
+	print('/* MySQL DDL - BEGIN ----- schemawiz(csvfilename).guess_mysql_ddl() ----- */ \n')
+	print(obj.guess_mysql_ddl())
+	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
 
 	print('/* BigQuery External DDL - BEGIN ----- schemawiz(csvfilename).guess_BigQueryExternal_ddl() ----- */ \n')
 	print(obj.guess_BigQueryExternal_ddl())
@@ -412,4 +420,5 @@ if __name__ == '__main__':
 	print('/* BigQuery DDL - BEGIN ----- schemawiz(csvfilename).guess_BigQuery_ddl() ----- */ \n')
 	print(obj.guess_BigQuery_ddl())
 	print('\n/* BigQuery DDL - END   ----- ----- ----- ----- */ \n')
+	
 
