@@ -4,7 +4,12 @@
 
 from schemawizard_package.schemawizard import schemawiz
 
-postgres_ddl = schemawiz('tesla.csv').guess_postgres_ddl('my_postgres_table1')
+obj = schemawiz('tesla.csv')
+
+postgres_ddl = obj.guess_postgres_ddl()
+
+print('Tablename used in CREATE TABLE statement: ' + obj.lastcall_tablename + '\n')
+
 
 print(postgres_ddl)
 

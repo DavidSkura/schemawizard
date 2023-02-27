@@ -9,6 +9,7 @@ class schemawiz:
 	def __init__(self,csvfilename=''):
 		self.version=1.0
 		self.force_delimiter = ''
+		self.lastcall_tablename = ''
 		self.delimiter = ''
 		self.logging_on = False
 		self.SomeFileContents = []
@@ -290,7 +291,9 @@ class schemawiz:
 			tablename = self.gettablename()
 		else:
 			tablename = usetablename
-		
+
+		self.lastcall_tablename = tablename
+
 		project = project.replace(' ','').lower()
 		dataset = dataset.replace(' ','').lower()
 		tablename = tablename.replace(' ','').lower()
@@ -326,7 +329,9 @@ class schemawiz:
 			tablename = self.gettablename()
 		else:
 			tablename = usetablename
-		
+
+		self.lastcall_tablename = tablename
+
 		project = project.replace(' ','').lower()
 		dataset = dataset.replace(' ','').lower()
 		tablename = tablename.replace(' ','').lower()
@@ -367,6 +372,8 @@ class schemawiz:
 		else:
 			tablename = usetablename
 
+		self.lastcall_tablename = tablename
+
 		sql = 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + self.column_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ,\n'
@@ -382,6 +389,7 @@ class schemawiz:
 			tablename = self.gettablename()
 		else:
 			tablename = usetablename
+		self.lastcall_tablename = tablename
 
 		sql = 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
 		for i in range(0,len(self.column_names)):
@@ -394,6 +402,7 @@ class schemawiz:
 
 
 if __name__ == '__main__':
+
 	csvfilename = input('csvfile to read? ')
 	
 	obj = schemawiz(csvfilename)
@@ -401,7 +410,9 @@ if __name__ == '__main__':
 	#obj.loadcsvfile(csvfilename)
 
 	print('/* Postgres DDL - BEGIN ----- schemawiz(csvfilename).guess_postgres_ddl() ----- */ \n')
-	print(obj.guess_postgres_ddl())
+	ddl = obj.guess_postgres_ddl()
+	print('Tablename used : ' + obj.lastcall_tablename + '\n')
+	print(ddl)
 	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
 
 	print('/* MySQL DDL - BEGIN ----- schemawiz(csvfilename).guess_mysql_ddl() ----- */ \n')
