@@ -104,14 +104,9 @@ class schemawiz:
 	def gettablename(self):
 
 		now = (datetime.now())
-		tbl_prefix= 'tblcsv_' + str(now.year) + ('0' + str(now.month))[-2:] + str(now.day) + str(now.hour) + str(now.minute) 
-		known_tablename = self.get_just_filename().replace('.','_')
-		if known_tablename =='':
-			fulltablename = tbl_prefix + self.get_just_filename().replace('.','_')
-		else:
-			fulltablename = self.get_just_filename().replace('.','_')
+		rando_tablename= 'tblcsv_' + str(now.year) + ('0' + str(now.month))[-2:] + str(now.day) + str(now.hour) + str(now.minute) 
 
-		return fulltablename
+		return rando_tablename
 
 	def count_chars(self,data,exceptchars=''):
 		chars_in_hdr = {}
