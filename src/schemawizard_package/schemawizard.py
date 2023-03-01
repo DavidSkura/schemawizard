@@ -11,7 +11,9 @@ class dater:
 	def __init__(self,date_to_check=''):
 		self.local_db = db()
 		self.connect_local_db()
-		self.date_formats = ['YYYYMMDD','YYYY/MM/DD','YYYY-MM-DD','YYYY-DD-MM']
+		self.date_formats = ['YYYY/MM/DD','YYYY-MM-DD','YYYY-Mon-DD','MM/DD/YYYY','Mon-DD-YYYY','Mon-DD-YY','Month DD,YY','Month DD,YYYY','DD-Mon-YYYY','YY-Mon-DD','YYYYMMDD','YYMMDD','YYYY-DD-MM','Mon dd/YY']
+		self.timestamp_formats = ['YYYY-MM-DD HH:MI:SS']
+
 		self.date_to_check = date_to_check 
 		if date_to_check != '':
 			self.chk_date(date_to_check)
@@ -65,29 +67,89 @@ class dater:
 		except ValueError:
 			return False
 
+	def is_an_int(self,prm):
+			try:
+				if int(prm) == int(prm):
+					return True
+				else:
+					return False
+			except:
+					return False
+
+	def match_timestamp_type(self,timestamp_string):	
+		for i in range(0,len(self.timestamp_formats)):
+			fmt = self.timestamp_formats[i]
+			if self.chk_sql_timestamp_format(timestamp_string,fmt):
+				return i
+			else:
+				return -1
+
+	def chk_sql_timestamp_format(self,timestamp_string,date_format):
+		retval = False
+		if len(timestamp_string) > 12:
+			sql = "SELECT to_char('" + timestamp_string + "'::timestamp,'" + date_format + "')"
+			try:
+				#print(sql)
+				return_fmt = self.local_db.queryone(sql)
+				retval = True
+			except Exception as e:
+				retval = False
+
+		return retval
+
 	# -1 means no matching date format
 	# > -1 means the date format matches self.date_formats[return_value]
 	def match_date_type(self,date_string):	
-		for i in range(0,len(self.date_formats)):
-			if self.chk_sql_date_format(date_string,self.date_formats[i]):
-				return i
-		return -1
+		fmtdict = {}
+		dateformatscore = {}
+		bestchoice = -1
+		bestfmt = -1
+		besthits = -1
+
+		# might be a date
+		if (((self.is_an_int(date_string) and len(date_string) == 8)) or ((not self.is_an_int(date_string)) and (len(date_string) > 5) and (len(date_string) < 12))): 
+			for i in range(0,len(self.date_formats)):
+				dateformatscore[self.date_formats[i]] = 0
+				fmtdict[self.date_formats[i]] = i
+			
+			for i in range(0,len(self.date_formats)):
+				retval = self.chk_sql_date_format(date_string,self.date_formats[i])
+				#print(date_string + ' - ' + self.date_formats[i] + ' - ' + str(retval))
+
+				if retval:
+					dateformatscore[self.date_formats[i]] += 1
+
+			for fmt in dateformatscore:
+				if dateformatscore[fmt] > bestchoice:
+					bestchoice = dateformatscore[fmt]
+					bestfmt = fmt
+		
+		if bestchoice > 0:
+			return fmtdict[bestfmt]
+		else:
+			return -1
+
+	def match_integer_type(self,intvalue):
+		return self.is_an_int(intvalue)
+
 
 	def chk_sql_date_format(self,date_string,date_format):
 		
 		sql = """
-			SELECT CASE 
-				WHEN '""" + date_string + """' = to_char(to_date('""" + date_string + """','""" + date_format + """'),'""" + date_format + """') THEN '""" + date_format + """'
-				else ''
-				END as fmt
-		"""
 
+			SELECT CASE WHEN abs( to_date('""" + date_string + """','""" + date_format + """') - current_date) > 36500 THEN 'bad'
+			ELSE 'Good'
+			END as date_reasonablness
+
+		"""
 		try:
+			#print(sql)
 			return_fmt = self.local_db.queryone(sql)
-			if return_fmt.strip() =='':
-				return False
-			else:
+			if return_fmt == 'Good':
 				return True
+			else:
+				return False
+
 		except Exception as e:
 			return False
 		
@@ -252,10 +314,17 @@ class schemawiz:
 		#self.logger('decimal count : ' + str(deccount))
 
 		lookslike = ''
+
+		timestamp_nbr = self.dt_chker.match_timestamp_type(data)
 		date_format_nbr = self.dt_chker.match_date_type(data)
 		dtformat = ''
 
-		if date_format_nbr != -1:
+
+		if timestamp_nbr != -1:
+			lookslike = 'timestamp' 
+			dtformat = self.dt_chker.timestamp_formats[timestamp_nbr] 
+
+		elif date_format_nbr != -1:
 			lookslike = 'date' 
 			dtformat = self.dt_chker.date_formats[date_format_nbr] 
 
@@ -263,7 +332,7 @@ class schemawiz:
 			# 123.123232222
 			lookslike = 'numeric'
 
-		elif alphacount == 0 and deccount == 0:
+		elif self.dt_chker.match_integer_type(data) :
 			# 123
 			lookslike = 'integer'
 
@@ -282,12 +351,15 @@ class schemawiz:
 			for j in range(0,len(dataline)):
 
 				thisdatatype,dtformat = self.get_datatype(dataline[j])
+				#print(thisdatatype)
 				if self.column_names[j] not in found_datatypes:
 					found_datatypes[self.column_names[j]] = thisdatatype
 					found_datavalues[self.column_names[j]] = dataline[j]
 					found_datefomat[self.column_names[j]]	= dtformat
 				else:
 					if found_datatypes[self.column_names[j]] == 'date' and thisdatatype =='date' and found_datefomat[self.column_names[j]] != dtformat:
+						found_datatypes[self.column_names[j]] == 'text'
+					elif found_datatypes[self.column_names[j]] == 'timestamp' and thisdatatype =='timestamp' and found_datefomat[self.column_names[j]] != dtformat:
 						found_datatypes[self.column_names[j]] == 'text'
 					elif found_datatypes[self.column_names[j]] != thisdatatype:
 						if found_datatypes[self.column_names[j]] == 'text' or thisdatatype == 'text':
@@ -322,6 +394,8 @@ class schemawiz:
 			return 'STRING'
 		elif postgres_datatype.lower().strip() == 'date':
 			return 'DATE'
+		elif postgres_datatype.lower().strip() == 'timestamp':
+			return 'TIMESTAMP'
 		elif postgres_datatype.lower().strip() == 'integer':
 			return 'INT64'
 		elif postgres_datatype.lower().strip() == 'numeric':
@@ -406,8 +480,8 @@ class schemawiz:
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + self.BigQuery_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ' 
 			
-			if self.column_datatypes[i].strip().lower() == 'date':
-				sql += "OPTIONS (description='dateformat in csv [" + self.column_dateformats[i] + "]')"
+			if self.column_datatypes[i].strip().lower() == 'date' or self.column_datatypes[i].strip().lower() == 'timestamp':
+				sql += "OPTIONS (description='" + self.column_datatypes[i].strip().lower() + " format in csv [" + self.column_dateformats[i] + "]')"
 
 			sql += ',\n'
 
@@ -450,8 +524,8 @@ class schemawiz:
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + self.BigQuery_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ' 
 			
-			if self.column_datatypes[i].strip().lower() == 'date':
-				sql += "OPTIONS (description='dateformat in csv [" + self.column_dateformats[i] + "]')"
+			if self.column_datatypes[i].strip().lower() == 'date' or self.column_datatypes[i].strip().lower() == 'timestamp':
+				sql += "OPTIONS (description='" + self.column_datatypes[i].strip().lower() + " format in csv [" + self.column_dateformats[i] + "]')"
 
 			sql += ',\n'
 
@@ -493,8 +567,9 @@ class schemawiz:
 		sql = 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + self.column_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ,\n'
-			if self.column_datatypes[i].strip().lower() == 'date':
-				fldcommentsql += 'COMMENT ON COLUMN ' + tablename + '.' + self.column_names[i] + " IS 'dateformat in csv [" + self.column_dateformats[i] + "]';\n"
+			if self.column_datatypes[i].strip().lower() == 'date' or self.column_datatypes[i].strip().lower() == 'timestamp':
+				fldcommentsql += 'COMMENT ON COLUMN ' + tablename + '.' + self.column_names[i] + " IS '" + self.column_datatypes[i].strip().lower() + " format in csv [" + self.column_dateformats[i] + "]';\n"
+
 		sql = sql[:-2] + '\n);\n\n'
 		sql += 'COMMENT ON TABLE ' + tablename + " IS 'This Postgres table was defined by schemawiz for loading the csv file " + self.csvfilename + ", delimiter= " + self.delimiter + "';\n"
 		sql += fldcommentsql
@@ -513,8 +588,8 @@ class schemawiz:
 		sql = 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + self.column_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ '
-			if self.column_datatypes[i].strip().lower() == 'date':
-				sql += 'COMMENT "dateformat in csv [' + self.column_dateformats[i] + ']" '
+			if self.column_datatypes[i].strip().lower() == 'date' or self.column_datatypes[i].strip().lower() == 'timestamp':
+				sql += 'COMMENT "' + self.column_datatypes[i].strip().lower() + ' format in csv [' + self.column_dateformats[i] + ']" '
 			sql += ' ,\n'
 
 		sql = sql[:-2] + '\n) \n'
@@ -525,15 +600,30 @@ class schemawiz:
 
 
 if __name__ == '__main__':
-	csvfilename = 'tesla.csv' #input('csvfile to read? ')
+	csvfilename = input('csvfile to read? ')
 
 	obj = schemawiz()
 
 	# add any specific known date formats
-	obj.dt_chker.date_formats.append('Mon DD,YY')
+	#obj.dt_chker.date_formats.append('Mon DD,YY')
 	if csvfilename != '':
 		obj.loadcsvfile(csvfilename)
 
+
+	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
+	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
+	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
+	print(ddl)
+	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
+
+
+	"""
+	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
+	print(obj.guess_mysql_ddl())
+	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
+
+
+	
 	print('/* BigQuery External DDL - BEGIN ----- schemawiz().guess_BigQueryExternal_ddl() ----- */ \n')
 	print(obj.guess_BigQueryExternal_ddl('watchful-lotus-364517','dave'))
 	print('\n/* BigQuery External DDL - END   ----- ----- ----- ----- */ \n')
@@ -542,14 +632,5 @@ if __name__ == '__main__':
 	print(obj.guess_BigQuery_ddl('watchful-lotus-364517','dave'))
 	print('\n/* BigQuery DDL - END   ----- ----- ----- ----- */ \n')
 
-	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
-	print(obj.guess_mysql_ddl())
-	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
 
-	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
-	ddl = obj.guess_postgres_ddl('tesla_csv')
-	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
-	print(ddl)
-	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
-
-
+	"""
