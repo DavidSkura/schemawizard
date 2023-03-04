@@ -4,7 +4,7 @@
 import datetime 
 import os
 import sys
-from postgresdave_package.postgresdave import db 
+from postgresdave_package.postgresdave import postgres_db 
 from mysqldave_package.mysqldave import mysql_db 
 from garbledave_package.garbledave import garbledave 
 
@@ -13,10 +13,10 @@ class database_type:
     MySQL = 2
     BigQuery = 3
 
-class dater:
+class dbthinger:
 	def __init__(self,date_to_check=''):
 		self.mysql_db = mysql_db()
-		self.postgres_db = db()
+		self.postgres_db = postgres_db()
 		self.postgres_date_formats = ['YYYY/MM/DD','YYYY-MM-DD','YYYY-Mon-DD','MM/DD/YYYY','Mon-DD-YYYY','Mon-DD-YY','Month DD,YY','Month DD,YYYY','DD-Mon-YYYY','YY-Mon-DD','YYYYMMDD','YYMMDD','YYYY-DD-MM','Mon dd/YY']
 		self.postgres_timestamp_formats = ['YYYY-MM-DD HH:MI:SS']
 
@@ -61,8 +61,8 @@ class dater:
 		elif thisDatabaseType == database_type.MySQL:
 			self.mysql_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME)
 
-		ans_save_connection_details = input('Save connection details (Y) ? ') or 'Y'
-		if ans_save_connection_details == 'Y':
+		ans_save_connection_details = input('Save connection details? (y/n) :') or 'y'
+		if ans_save_connection_details.upper() == 'Y':
 			f = open(configfilename,'w')
 
 			if thisDatabaseType == database_type.Postgres:
@@ -257,7 +257,7 @@ class dater:
 class schemawiz:	
 	def __init__(self,csvfilename=''):
 		self.version=2.0
-		self.dt_chker = dater()
+		self.dbthings = dbthinger()
 		self.force_delimiter = ''
 		self.lastcall_tablename = ''
 		self.delimiter = ''
@@ -279,13 +279,99 @@ class schemawiz:
 		if csvfilename != '':
 			self.loadcsvfile(csvfilename)
 	
+	def newpostgresconnection(self):
+		os.remove('.schemawiz_config' + str(database_type.Postgres))
+
+	def newmysqlconnection(self):
+		os.remove('.schemawiz_config' + str(database_type.MySQL))
+
+	def newconnections(self):
+		self.newpostgresconnection()
+		self.newmysqlconnection()
+
+	def justload_postgres_from_csv(self,csvfilename,tablename,withtruncate=False):
+		return_value = ''
+		self.loadcsvfile(csvfilename)
+		delimiter = self.lastcall_delimiter()
+
+		if self.dbthings.postgres_db.does_table_exist(tablename):
+			self.dbthings.postgres_db.load_csv_to_table(csvfilename,tablename,withtruncate,delimiter)
+			rowcount = self.dbthings.postgres_db.queryone('SELECT COUNT(*) FROM ' + tablename)
+			print('Loaded table ' + tablename + ' with ' + str(rowcount) + ' rows.')
+			return_value = tablename
+		else:
+			print('Table ' + tablename + ' does not exist.  Cannot load. \n alternatively try: createload_postgres_from_csv(csvfilename)')
+
+		return return_value
+
+	def createload_postgres_from_csv(self,csvfilename,sztablename=''):
+		return_value = ''
+		self.loadcsvfile(csvfilename)
+		ddl = self.guess_postgres_ddl(sztablename)
+		delimiter = self.lastcall_delimiter()
+		if sztablename == '':
+			tablename = self.lastcall_tablename
+		else:
+			tablename = sztablename
+
+		if not self.dbthings.postgres_db.does_table_exist(tablename):
+			self.dbthings.postgres_db.execute(ddl)
+
+			self.dbthings.postgres_db.load_csv_to_table(csvfilename,tablename,True,delimiter)
+
+			rowcount = self.dbthings.postgres_db.queryone('SELECT COUNT(*) FROM ' + tablename)
+			print('Created/Loaded table ' + tablename + ' with ' + str(rowcount) + ' rows.')
+			return_value = tablename
+		else:
+			print('Table ' + tablename + ' already exists.  Stopping Load.')
+
+		return return_value
+
+	def justload_mysql_from_csv(self,csvfilename,tablename,withtruncate=False):
+		return_value = ''
+		self.loadcsvfile(csvfilename)
+		delimiter = self.lastcall_delimiter()
+		self.dbthings.mysql_db.connect()
+		if self.dbthings.mysql_db.does_table_exist(tablename):
+			self.dbthings.mysql_db.load_csv_to_table(csvfilename,tablename,withtruncate,delimiter)
+			rowcount = self.dbthings.mysql_db.queryone('SELECT COUNT(*) FROM ' + tablename)
+			print('Loaded table ' + tablename + ' with ' + str(rowcount) + ' rows.')
+			return_value = tablename
+		else:
+			print('Table ' + tablename + ' does not exist.  Cannot load. \n alternatively try: createload_mysql_from_csv(csvfilename)')
+
+		return return_value
+
+	def createload_mysql_from_csv(self,csvfilename,sztablename=''):
+		return_value = ''
+		self.loadcsvfile(csvfilename)
+		ddl = self.guess_mysql_ddl(sztablename)
+		delimiter = self.lastcall_delimiter()
+		if sztablename == '':
+			tablename = self.lastcall_tablename
+		else:
+			tablename = sztablename
+
+		if not self.dbthings.mysql_db.does_table_exist(tablename):
+			self.dbthings.mysql_db.execute(ddl)
+
+			self.dbthings.mysql_db.load_csv_to_table(csvfilename,tablename,True,delimiter)
+
+			rowcount = self.dbthings.mysql_db.queryone('SELECT COUNT(*) FROM ' + tablename)
+			print('Created/Loaded table ' + tablename + ' with ' + str(rowcount) + ' rows.')
+			return_value = tablename
+		else:
+			print('Table ' + tablename + ' already exists.  Stopping Load.')
+
+		return return_value
+
 	def add_date_format(self,dt_fmt):
-		self.dt_chker.mysql_date_formats.append(dt_fmt)
-		self.dt_chker.postgres_date_formats.append(dt_fmt)
+		self.dbthings.mysql_date_formats.append(dt_fmt)
+		self.dbthings.postgres_date_formats.append(dt_fmt)
 
 	def add_timestamp_format(self,tmsp_fmt):
-		self.dt_chker.mysql_timestamp_formats.append(tmsp_fmt)
-		self.dt_chker.postgres_timestamp_formats.append(tmsp_fmt)
+		self.dbthings.mysql_timestamp_formats.append(tmsp_fmt)
+		self.dbthings.postgres_timestamp_formats.append(tmsp_fmt)
 
 	def lastcall_delimiter(self):
 		return self.delimiter
@@ -422,30 +508,30 @@ class schemawiz:
 
 		lookslike = ''
 
-		timestamp_nbr = self.dt_chker.match_timestamp_type(data,thisdatabase_type)
-		date_format_nbr = self.dt_chker.match_date_type(data,thisdatabase_type)
+		timestamp_nbr = self.dbthings.match_timestamp_type(data,thisdatabase_type)
+		date_format_nbr = self.dbthings.match_date_type(data,thisdatabase_type)
 		dtformat = ''
 
 
 		if timestamp_nbr != -1:
 			lookslike = 'timestamp' 
 			if thisdatabase_type == database_type.Postgres:
-				dtformat = self.dt_chker.postgres_timestamp_formats[timestamp_nbr] 
+				dtformat = self.dbthings.postgres_timestamp_formats[timestamp_nbr] 
 			elif thisdatabase_type == database_type.MySQL:
-				dtformat = self.dt_chker.mysql_timestamp_formats[timestamp_nbr] 
+				dtformat = self.dbthings.mysql_timestamp_formats[timestamp_nbr] 
 
 		elif date_format_nbr != -1:
 			lookslike = 'date' 
 			if thisdatabase_type == database_type.Postgres:
-				dtformat = self.dt_chker.postgres_date_formats[date_format_nbr] 
+				dtformat = self.dbthings.postgres_date_formats[date_format_nbr] 
 			elif thisdatabase_type == database_type.MySQL:
-				dtformat = self.dt_chker.mysql_date_formats[date_format_nbr] 
+				dtformat = self.dbthings.mysql_date_formats[date_format_nbr] 
 
 		elif alphacount == 0 and deccount == 1:
 			# 123.123232222
 			lookslike = 'numeric'
 
-		elif self.dt_chker.match_integer_type(data) :
+		elif self.dbthings.match_integer_type(data) :
 			# 123
 			lookslike = 'integer'
 
@@ -580,7 +666,7 @@ class schemawiz:
 		return delimiter_guess
 
 	def guess_BigQueryExternal_ddl(self,useproject='',usedataset='',usetablename=''):
-		self.dt_chker.connect_local_db(database_type.MySQL)
+		self.dbthings.connect_local_db(database_type.MySQL)
 
 		if useproject == '':
 			project = 'schemawiz-123'
@@ -625,7 +711,7 @@ class schemawiz:
 		return sql
 
 	def guess_BigQuery_ddl(self,useproject='',usedataset='',usetablename=''):
-		self.dt_chker.connect_local_db(database_type.MySQL)
+		self.dbthings.connect_local_db(database_type.MySQL)
 
 		if useproject == '':
 			project = 'schemawiz-123'
@@ -683,7 +769,7 @@ class schemawiz:
 		return sql
 
 	def guess_postgres_ddl(self,usetablename=''):
-		self.dt_chker.connect_local_db(database_type.Postgres)
+		self.dbthings.connect_local_db(database_type.Postgres)
 
 		if not self.analyzed:
 			self.analyze_csvfile(database_type.Postgres)
@@ -709,7 +795,7 @@ class schemawiz:
 		return sql
 
 	def guess_mysql_ddl(self,usetablename=''):
-		self.dt_chker.connect_local_db(database_type.MySQL)
+		self.dbthings.connect_local_db(database_type.MySQL)
 
 		if not self.analyzed:
 			self.analyze_csvfile(database_type.MySQL)
@@ -739,16 +825,20 @@ if __name__ == '__main__':
 	obj = schemawiz()
 
 	# add any specific known date formats
-	#obj.dt_chker.postgres_date_formats.append('Mon DD,YY')
+	#obj.dbthings.postgres_date_formats.append('Mon DD,YY')
 	if csvfilename != '':
 		obj.loadcsvfile(csvfilename)
+
+	r = obj.createload_postgres_from_csv(csvfilename)
+	print(r + ' created.')
+
+
+	"""
 
 	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
 	print(obj.guess_mysql_ddl('sample_csv'))
 	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
 
-
-	"""
 
 	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
 	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))

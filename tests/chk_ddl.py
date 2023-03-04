@@ -1,19 +1,14 @@
 """
   Dave Skura
-  
-  File Description:
 """
 from schemawizard_package.schemawizard import schemawiz
 csvfilename = 'sample.csv'
-print ("checking csv file " + csvfilename) # 
 
-schwiz = schemawiz()
+#ddl = schemawiz(csvfilename).guess_postgres_ddl()
+ddl = schemawiz(csvfilename).guess_mysql_ddl()
+#postgres_ddl = schemawiz(csvfilename).guess_postgres_ddl(csvfilename.replace('.','_'))
 
-schwiz.loadcsvfile(csvfilename)
-
-postgres_ddl = schwiz.guess_postgres_ddl(csvfilename.replace('.','_'))
-
-print(postgres_ddl)
+print(ddl)
 
 
 
