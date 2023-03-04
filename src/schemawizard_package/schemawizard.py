@@ -6,6 +6,7 @@ import os
 import sys
 from postgresdave_package.postgresdave import db 
 from mysqldave_package.mysqldave import mysql_db 
+from garbledave_package.garbledave import garbledave 
 
 class database_type:
     Postgres = 1
@@ -65,9 +66,9 @@ class dater:
 			f = open(configfilename,'w')
 
 			if thisDatabaseType == database_type.Postgres:
-				f.write(DB_USERNAME + ' - ' + DB_USERPWD + ' - ' + DB_HOST + ' - ' + DB_PORT + ' - ' + DB_NAME + ' - ' + DB_SCHEMA)
+				f.write(garbledave().garbleit(DB_USERNAME + ' - ' + DB_USERPWD + ' - ' + DB_HOST + ' - ' + DB_PORT + ' - ' + DB_NAME + ' - ' + DB_SCHEMA))
 			elif thisDatabaseType == database_type.MySQL:
-				f.write(DB_USERNAME + ' - ' + DB_USERPWD + ' - ' + DB_HOST + ' - ' + DB_PORT + ' - ' + DB_NAME)
+				f.write(garbledave().garbleit(DB_USERNAME + ' - ' + DB_USERPWD + ' - ' + DB_HOST + ' - ' + DB_PORT + ' - ' + DB_NAME))
 
 			f.close()
 
@@ -76,7 +77,7 @@ class dater:
 
 		try:
 			f = open(configfilename,'r')
-			config_line = f.read() 
+			config_line = garbledave().ungarbleit(f.readline())
 			f.close()
 			dbsettings = config_line.split(' - ')
 			DB_USERNAME = dbsettings[0]
@@ -90,7 +91,7 @@ class dater:
 			elif thisDatabaseType == database_type.MySQL:
 				self.mysql_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME)
 
-		except:
+		except Exception as e:
 			self.ask_for_database_details(thisDatabaseType)
 		
 	def chk_date(self,possible_date_str):
@@ -742,17 +743,18 @@ if __name__ == '__main__':
 	if csvfilename != '':
 		obj.loadcsvfile(csvfilename)
 
+	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
+	print(obj.guess_mysql_ddl('sample_csv'))
+	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
+
+
+	"""
+
 	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
 	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
 	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
 	print(ddl)
 	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
-
-
-	"""
-	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
-	print(obj.guess_mysql_ddl('sample_csv'))
-	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
 
 
 

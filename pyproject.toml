@@ -1,11 +1,11 @@
 [build-system]
-requires = ["hatchling","postgresdave_package","mysqldave_package"]
+requires = ["hatchling","postgresdave_package","mysqldave_package","garbledave_package"]
 
 build-backend = "hatchling.build"
 
 [project]
 name = "schemawizard_package"
-version = "2.1.7"
+version = "2.2.0"
 authors = [
   { name="Dave Skura", email="dskura@gmail.com" },
 ]
