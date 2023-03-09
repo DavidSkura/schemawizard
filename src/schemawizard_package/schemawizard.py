@@ -74,25 +74,25 @@ class dbthinger:
 
 	def connect_local_db(self,thisDatabaseType):
 		configfilename = '.schemawiz_config' + str(thisDatabaseType)
+		if ((thisDatabaseType == database_type.Postgres) and (not self.postgres_db.dbconn))	or ((thisDatabaseType == database_type.MySQL) and (not self.mysql_db.dbconn)):
+			try:
+				f = open(configfilename,'r')
+				config_line = garbledave().ungarbleit(f.readline())
+				f.close()
+				dbsettings = config_line.split(' - ')
+				DB_USERNAME = dbsettings[0]
+				DB_USERPWD = dbsettings[1]
+				DB_HOST = dbsettings[2]
+				DB_PORT = dbsettings[3]
+				DB_NAME = dbsettings[4]
+				if thisDatabaseType == database_type.Postgres:
+					DB_SCHEMA = dbsettings[5]
+					self.postgres_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME,DB_SCHEMA)
+				elif thisDatabaseType == database_type.MySQL:
+					self.mysql_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME)
 
-		try:
-			f = open(configfilename,'r')
-			config_line = garbledave().ungarbleit(f.readline())
-			f.close()
-			dbsettings = config_line.split(' - ')
-			DB_USERNAME = dbsettings[0]
-			DB_USERPWD = dbsettings[1]
-			DB_HOST = dbsettings[2]
-			DB_PORT = dbsettings[3]
-			DB_NAME = dbsettings[4]
-			if thisDatabaseType == database_type.Postgres:
-				DB_SCHEMA = dbsettings[5]
-				self.postgres_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME,DB_SCHEMA)
-			elif thisDatabaseType == database_type.MySQL:
-				self.mysql_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME)
-
-		except Exception as e:
-			self.ask_for_database_details(thisDatabaseType)
+			except Exception as e:
+				self.ask_for_database_details(thisDatabaseType)
 		
 	def chk_date(self,possible_date_str):
 		print (" Checking date " + possible_date_str) # 
@@ -244,8 +244,9 @@ class dbthinger:
 
 		"""
 		try:
-			#print(sql)
+
 			return_fmt = self.postgres_db.queryone(sql)
+
 			if return_fmt == 'Good':
 				return True
 			else:
@@ -304,8 +305,9 @@ class schemawiz:
 
 		return return_value
 
-	def createload_postgres_from_csv(self,csvfilename,sztablename=''):
+	def createload_postgres_from_csv(self,csvfilename,sztablename='',ddlfilename=''):
 		return_value = ''
+
 		self.loadcsvfile(csvfilename)
 		ddl = self.guess_postgres_ddl(sztablename)
 		delimiter = self.lastcall_delimiter()
@@ -315,6 +317,12 @@ class schemawiz:
 			tablename = sztablename
 
 		if not self.dbthings.postgres_db.does_table_exist(tablename):
+			if ddlfilename != '':
+				f = open(ddlfilename,'w')
+				f.write(ddl)
+				f.close()
+
+			print(ddl)
 			self.dbthings.postgres_db.execute(ddl)
 
 			self.dbthings.postgres_db.load_csv_to_table(csvfilename,tablename,True,delimiter)
@@ -342,7 +350,7 @@ class schemawiz:
 
 		return return_value
 
-	def createload_mysql_from_csv(self,csvfilename,sztablename=''):
+	def createload_mysql_from_csv(self,csvfilename,sztablename='',ddlfilename=''):
 		return_value = ''
 		self.loadcsvfile(csvfilename)
 		ddl = self.guess_mysql_ddl(sztablename)
@@ -353,6 +361,11 @@ class schemawiz:
 			tablename = sztablename
 
 		if not self.dbthings.mysql_db.does_table_exist(tablename):
+			if ddlfilename != '':
+				f = open(ddlfilename,'w')
+				f.write(ddl)
+				f.close()
+			print(ddl)
 			self.dbthings.mysql_db.execute(ddl)
 
 			self.dbthings.mysql_db.load_csv_to_table(csvfilename,tablename,True,delimiter)
@@ -429,6 +442,8 @@ class schemawiz:
 							self.datalinesize = total_linesize/10
 
 						self.SomeFileContents.append(line)
+						if (linecount>1000):
+							break
 				
 				#self.logger('file has ' + str(len(self.SomeFileContents)) + ' lines')
 				#self.logger('line size is ' + str(self.datalinesize) + ' ytes')
@@ -769,6 +784,7 @@ class schemawiz:
 		return sql
 
 	def guess_postgres_ddl(self,usetablename=''):
+
 		self.dbthings.connect_local_db(database_type.Postgres)
 
 		if not self.analyzed:
@@ -820,20 +836,27 @@ class schemawiz:
 
 
 if __name__ == '__main__':
-	csvfilename = 'sample.csv' # input('csvfile to read? ')
+	#csvfilename = input('csvfile to read? ')
 
 	obj = schemawiz()
+	#tbl = obj.createload_mysql_from_csv('floats.csv','thistbl')
+
+"""
+	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
+	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
+	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
+	print(ddl)
+	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
+	
+	
+	print(obj.dbthings.postgres_db.does_table_exist('newtbl'))
 
 	# add any specific known date formats
 	#obj.dbthings.postgres_date_formats.append('Mon DD,YY')
 	if csvfilename != '':
 		obj.loadcsvfile(csvfilename)
 
-	r = obj.createload_postgres_from_csv(csvfilename)
-	print(r + ' created.')
 
-
-	"""
 
 	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
 	print(obj.guess_mysql_ddl('sample_csv'))
