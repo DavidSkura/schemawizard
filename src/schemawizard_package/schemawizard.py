@@ -784,7 +784,7 @@ class schemawiz:
 		return sql
 
 	def guess_postgres_ddl(self,usetablename=''):
-
+		
 		self.dbthings.connect_local_db(database_type.Postgres)
 
 		if not self.analyzed:
@@ -807,6 +807,7 @@ class schemawiz:
 		sql = sql[:-2] + '\n);\n\n'
 		sql += 'COMMENT ON TABLE ' + tablename + " IS 'This Postgres table was defined by schemawiz for loading the csv file " + self.csvfilename + ", delimiter (" + self.delimiter + ")';\n"
 		sql += fldcommentsql
+		print(sql)
 
 		return sql
 
@@ -836,11 +837,13 @@ class schemawiz:
 
 
 if __name__ == '__main__':
-	#csvfilename = input('csvfile to read? ')
+	csvfilename ='station_months.tsv' #input('csvfile to read? ')
 
 	obj = schemawiz()
-	#tbl = obj.createload_mysql_from_csv('floats.csv','thistbl')
-
+	obj.force_delimiter = '\t'
+	obj.loadcsvfile(csvfilename)
+	ddl = obj.guess_postgres_ddl('canweather.station_months')
+	
 """
 	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
 	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
