@@ -399,13 +399,12 @@ class schemawiz:
 	def loadcsvfile(self,csvfilename):
 		if csvfilename != '':
 			try:
-				f = open(csvfilename,'r')
-				filedata = f.readlines()
-				f.close()
-				self.csvfilename = csvfilename
-				self.delimiter = self.GuessDelimiter(filedata[0])
+				with open(csvfilename) as f:
+					for csvline in f:
+						self.csvfilename = csvfilename
+						self.delimiter = self.GuessDelimiter(csvline)
+						break
 
-				#self.analyze_csvfile()
 			except Exception as e:
 				print('Cannot read file: ' + csvfilename)
 				sys.exit(0)
@@ -442,7 +441,7 @@ class schemawiz:
 							self.datalinesize = total_linesize/10
 
 						self.SomeFileContents.append(line)
-						if (linecount>1000):
+						if (linecount>100):
 							break
 				
 				#self.logger('file has ' + str(len(self.SomeFileContents)) + ' lines')
@@ -797,8 +796,9 @@ class schemawiz:
 		self.lastcall_tablename = tablename
 
 		fldcommentsql = '' 
+		sql = 'DROP TABLE IF EXISTS ' + tablename + ';\n'
 
-		sql = 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
+		sql += 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + self.column_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ,\n'
 			if self.column_datatypes[i].strip().lower() == 'date' or self.column_datatypes[i].strip().lower() == 'timestamp':
@@ -822,7 +822,9 @@ class schemawiz:
 			tablename = usetablename
 		self.lastcall_tablename = tablename
 
-		sql = 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
+		sql = 'DROP TABLE IF EXISTS ' + tablename + ';\n'
+
+		sql += 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + str(self.column_datatypes[i]) + ' \t\t/* eg. ' + self.column_sample[i] + ' */ '
 			if str(self.column_datatypes[i]).strip().lower() == 'date' or str(self.column_datatypes[i]).strip().lower() == 'timestamp':
@@ -837,12 +839,16 @@ class schemawiz:
 
 
 if __name__ == '__main__':
-	csvfilename ='station_months.tsv' #input('csvfile to read? ')
+	csvfilename ='canweather.station_events.tsv' #input('csvfile to read? ')
 
 	obj = schemawiz()
-	obj.force_delimiter = '\t'
-	obj.loadcsvfile(csvfilename)
-	ddl = obj.guess_postgres_ddl('canweather.station_months')
+	#obj.force_delimiter = '\t'
+	#obj.loadcsvfile(csvfilename)
+	obj.justload_postgres_from_csv(csvfilename,'canweather.station_events',True)
+	
+	#print("delimiter= '" + obj.delimiter + "' ")
+		
+	#ddl = obj.guess_postgres_ddl('canweather.station_events')
 	
 """
 	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
