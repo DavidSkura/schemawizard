@@ -664,18 +664,25 @@ class schemawiz:
 		if self.force_delimiter != '':
 			delimiter_guess = self.force_delimiter
 		else:
-			hdrs = first_row 
-			chars_in_hdr = {}
-			chars_in_hdr = self.count_chars(hdrs,"'"+ 'abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"')
+			if first_row.find('\t') > -1:
+				delimiter_guess = '\t'
+			elif first_row.find(',') > -1:
+				delimiter_guess = ','
+			elif first_row.find('~') > -1:
+				delimiter_guess = '~'
+			else:
+				hdrs = first_row 
+				chars_in_hdr = {}
+				chars_in_hdr = self.count_chars(hdrs,"'"+ 'abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"')
 
-			currentchar = 'no idea'
-			currentvalue = 0
-			for ch in chars_in_hdr:
-				if chars_in_hdr[ch] > currentvalue:
-					currentchar = ch
-					currentvalue = chars_in_hdr[ch]
+				currentchar = 'no idea'
+				currentvalue = 0
+				for ch in chars_in_hdr:
+					if chars_in_hdr[ch] > currentvalue:
+						currentchar = ch
+						currentvalue = chars_in_hdr[ch]
 
-			delimiter_guess = currentchar
+				delimiter_guess = currentchar
 
 		return delimiter_guess
 
@@ -807,7 +814,7 @@ class schemawiz:
 		sql = sql[:-2] + '\n);\n\n'
 		sql += 'COMMENT ON TABLE ' + tablename + " IS 'This Postgres table was defined by schemawiz for loading the csv file " + self.csvfilename + ", delimiter (" + self.delimiter + ")';\n"
 		sql += fldcommentsql
-		print(sql)
+		#print(sql)
 
 		return sql
 
@@ -839,12 +846,12 @@ class schemawiz:
 
 
 if __name__ == '__main__':
-	csvfilename ='canweather.station_events.tsv' #input('csvfile to read? ')
+	csvfilename ='station_years.tsv' #input('csvfile to read? ')
 
 	obj = schemawiz()
 	#obj.force_delimiter = '\t'
 	#obj.loadcsvfile(csvfilename)
-	obj.justload_postgres_from_csv(csvfilename,'canweather.station_events',True)
+	#obj.createload_postgres_from_csv(csvfilename,'canweather.station_years','z.canweather.station_years.ddl')
 	
 	#print("delimiter= '" + obj.delimiter + "' ")
 		
