@@ -4,17 +4,21 @@
 import datetime 
 import os
 import sys
+from sqlitedave_package.sqlitedave import sqlite_db
 from postgresdave_package.postgresdave import postgres_db 
 from mysqldave_package.mysqldave import mysql_db 
 from garbledave_package.garbledave import garbledave 
 
 class database_type:
-    Postgres = 1
-    MySQL = 2
-    BigQuery = 3
+	Postgres = 1
+	MySQL = 2
+	sqlite = 3
+	BigQuery = 4
+
 
 class dbthinger:
 	def __init__(self,date_to_check=''):
+		self.sqlite_db = sqlite_db()
 		self.mysql_db = mysql_db()
 		self.postgres_db = postgres_db()
 		self.postgres_date_formats = ['YYYY/MM/DD','YYYY-MM-DD','YYYY-Mon-DD','MM/DD/YYYY','Mon-DD-YYYY','Mon-DD-YY','Month DD,YY','Month DD,YYYY','DD-Mon-YYYY','YY-Mon-DD','YYYYMMDD','YYMMDD','YYYY-DD-MM','Mon dd/YY']
@@ -30,7 +34,17 @@ class dbthinger:
 	def ask_for_database_details(self,thisDatabaseType):
 		configfilename = '.schemawiz_config' + str(thisDatabaseType)
 
-		DB_HOST = input('DB_HOST (localhost): ') or 'localhost'
+		if thisDatabaseType == database_type.Postgres:
+			DB_NAME = input('DB_NAME (postgres): ') or 'postgres'
+		elif thisDatabaseType == database_type.MySQL:
+			DB_NAME = input('DB_NAME : ') or 'atlas'
+		elif thisDatabaseType == database_type.sqlite:
+			DB_NAME = input('DB_NAME : (local_sqlite_db)') or 'local_sqlite_db'
+
+		DB_HOST = ''
+		if (thisDatabaseType == database_type.Postgres) or (thisDatabaseType == database_type.MySQL):
+			DB_HOST = input('DB_HOST (localhost): ') or 'localhost'
+
 		DB_PORT = ''
 		if thisDatabaseType == database_type.Postgres:
 			DB_PORT = input('DB_PORT (1532): ') or '1532'
@@ -38,13 +52,8 @@ class dbthinger:
 			DB_PORT = input('DB_PORT (3306): ') or '3306'
 
 		if thisDatabaseType == database_type.Postgres:
-			DB_NAME = input('DB_NAME (postgres): ') or 'postgres'
-		elif thisDatabaseType == database_type.MySQL:
-			DB_NAME = input('DB_NAME : ') or 'atlas'
-
-		if thisDatabaseType == database_type.Postgres:
 			DB_USERNAME = input('DB_USERNAME (postgres): ') or 'postgres'
-		else:
+		elif thisDatabaseType == database_type.MySQL:
 			DB_USERNAME = input('DB_USERNAME: ') or 'dave'
 
 		DB_SCHEMA = ''
@@ -53,13 +62,15 @@ class dbthinger:
 
 		if thisDatabaseType == database_type.Postgres:
 			DB_USERPWD = input('DB_USERPWD: ') or '4165605869'
-		else:
+		elif thisDatabaseType == database_type.MySQL:
 			DB_USERPWD = input('DB_USERPWD: ') or 'dave'
 
 		if thisDatabaseType == database_type.Postgres:
 			self.postgres_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME,DB_SCHEMA)
 		elif thisDatabaseType == database_type.MySQL:
 			self.mysql_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME)
+		elif thisDatabaseType == database_type.sqlite:
+			self.sqlite_db.useConnectionDetails(DB_NAME)
 
 		ans_save_connection_details = input('Save connection details? (y/n) :') or 'y'
 		if ans_save_connection_details.upper() == 'Y':
@@ -69,27 +80,36 @@ class dbthinger:
 				f.write(garbledave().garbleit(DB_USERNAME + ' - ' + DB_USERPWD + ' - ' + DB_HOST + ' - ' + DB_PORT + ' - ' + DB_NAME + ' - ' + DB_SCHEMA))
 			elif thisDatabaseType == database_type.MySQL:
 				f.write(garbledave().garbleit(DB_USERNAME + ' - ' + DB_USERPWD + ' - ' + DB_HOST + ' - ' + DB_PORT + ' - ' + DB_NAME))
+			elif thisDatabaseType == database_type.sqlite:
+				f.write(garbledave().garbleit(DB_NAME + ' - '))
 
 			f.close()
 
 	def connect_local_db(self,thisDatabaseType):
 		configfilename = '.schemawiz_config' + str(thisDatabaseType)
-		if ((thisDatabaseType == database_type.Postgres) and (not self.postgres_db.dbconn))	or ((thisDatabaseType == database_type.MySQL) and (not self.mysql_db.dbconn)):
+		if (((thisDatabaseType == database_type.sqlite) and (not self.sqlite_db.dbconn)) or (thisDatabaseType == database_type.Postgres) and (not self.postgres_db.dbconn))	or ((thisDatabaseType == database_type.MySQL) and (not self.mysql_db.dbconn)):
 			try:
 				f = open(configfilename,'r')
 				config_line = garbledave().ungarbleit(f.readline())
-				f.close()
 				dbsettings = config_line.split(' - ')
-				DB_USERNAME = dbsettings[0]
-				DB_USERPWD = dbsettings[1]
-				DB_HOST = dbsettings[2]
-				DB_PORT = dbsettings[3]
-				DB_NAME = dbsettings[4]
-				if thisDatabaseType == database_type.Postgres:
-					DB_SCHEMA = dbsettings[5]
-					self.postgres_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME,DB_SCHEMA)
-				elif thisDatabaseType == database_type.MySQL:
-					self.mysql_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME)
+				f.close()
+
+				if thisDatabaseType == database_type.sqlite:
+					DB_NAME = dbsettings[0]
+					self.sqlite_db.useConnectionDetails(DB_NAME)
+
+				else:
+					DB_USERNAME = dbsettings[0]
+					DB_USERPWD = dbsettings[1]
+					DB_HOST = dbsettings[2]
+					DB_PORT = dbsettings[3]
+					DB_NAME = dbsettings[4]
+
+					if thisDatabaseType == database_type.Postgres:
+						DB_SCHEMA = dbsettings[5]
+						self.postgres_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME,DB_SCHEMA)
+					elif thisDatabaseType == database_type.MySQL:
+						self.mysql_db.useConnectionDetails(DB_USERNAME,DB_USERPWD,DB_HOST,DB_PORT,DB_NAME)
 
 			except Exception as e:
 				self.ask_for_database_details(thisDatabaseType)
@@ -267,6 +287,7 @@ class schemawiz:
 		self.column_names = []
 		self.column_datatypes = []
 		self.BigQuery_datatypes = []
+		self.sqlite_datatypes = []
 		self.column_sample = []
 		self.column_dateformats = []
 		self.analyzed	 = False
@@ -286,9 +307,58 @@ class schemawiz:
 	def newmysqlconnection(self):
 		os.remove('.schemawiz_config' + str(database_type.MySQL))
 
+	def newsqliteconnection(self):
+		os.remove('.schemawiz_config' + str(database_type.sqlite))
+
 	def newconnections(self):
 		self.newpostgresconnection()
 		self.newmysqlconnection()
+		self.newsqliteconnection()
+
+	def justload_sqlite_from_csv(self,csvfilename,tablename,withtruncate=False):
+		return_value = ''
+		self.loadcsvfile(csvfilename)
+		delimiter = self.lastcall_delimiter()
+
+		if self.dbthings.sqlite_db.does_table_exist(tablename):
+			self.dbthings.sqlite_db.load_csv_to_table(csvfilename,tablename,withtruncate,delimiter)
+			rowcount = self.dbthings.sqlite_db.queryone('SELECT COUNT(*) FROM ' + tablename)
+			print('Loaded table ' + tablename + ' with ' + str(rowcount) + ' rows.')
+			return_value = tablename
+		else:
+			print('Table ' + tablename + ' does not exist.  Cannot load. \n alternatively try: createload_postgres_from_csv(csvfilename)')
+
+		return return_value
+
+	def createload_sqlite_from_csv(self,csvfilename,sztablename='',ddlfilename=''):
+		return_value = ''
+
+		self.loadcsvfile(csvfilename)
+		ddl = self.guess_sqlite_ddl(sztablename)
+		delimiter = self.lastcall_delimiter()
+		if sztablename == '':
+			tablename = self.lastcall_tablename
+		else:
+			tablename = sztablename
+
+		if not self.dbthings.sqlite_db.does_table_exist(tablename):
+			if ddlfilename != '':
+				f = open(ddlfilename,'w')
+				f.write(ddl)
+				f.close()
+
+			print(ddl)
+			self.dbthings.sqlite_db.execute(ddl)
+
+			self.dbthings.sqlite_db.load_csv_to_table(csvfilename,tablename,True,delimiter)
+
+			rowcount = self.dbthings.sqlite_db.queryone('SELECT COUNT(*) FROM ' + tablename)
+			print('Created/Loaded table ' + tablename + ' with ' + str(rowcount) + ' rows.')
+			return_value = tablename
+		else:
+			print('Table ' + tablename + ' already exists.  Stopping Load.')
+
+		return return_value
 
 	def justload_postgres_from_csv(self,csvfilename,tablename,withtruncate=False):
 		return_value = ''
@@ -521,10 +591,12 @@ class schemawiz:
 		deccount = self.count_decimals(chardict)
 
 		lookslike = ''
-
-		timestamp_nbr = self.dbthings.match_timestamp_type(data,thisdatabase_type)
-		date_format_nbr = self.dbthings.match_date_type(data,thisdatabase_type)
 		dtformat = ''
+		timestamp_nbr = -1
+		date_format_nbr = -1
+		if thisdatabase_type != database_type.sqlite:
+			timestamp_nbr = self.dbthings.match_timestamp_type(data,thisdatabase_type)
+			date_format_nbr = self.dbthings.match_date_type(data,thisdatabase_type)
 
 
 		if timestamp_nbr != -1:
@@ -555,7 +627,6 @@ class schemawiz:
 		return lookslike,dtformat
 
 	def get_column_types(self,thisdatabase_type):
-
 
 		found_datatypes = {}
 		found_datavalues = {}
@@ -593,6 +664,7 @@ class schemawiz:
 			self.column_sample.append(found_datavalues[self.column_names[k]].replace('"',''))
 			self.column_dateformats.append(found_datefomat[self.column_names[k]])
 			self.BigQuery_datatypes.append(self.translate_dt(database_type.BigQuery,found_datatypes[self.column_names[k]]))
+			self.sqlite_datatypes.append(self.translate_dt(database_type.sqlite,found_datatypes[self.column_names[k]]))
 
 			if not self.IsaDateField and self.translate_dt(database_type.BigQuery,found_datatypes[self.column_names[k]]) == 'DATE': 		
 				self.IsaDateField = True
@@ -628,6 +700,16 @@ class schemawiz:
 				return 'float'
 			else:
 				return postgres_datatype
+		elif targettype == database_type.sqlite:
+			if postgres_datatype.lower().strip() == 'text':
+				return 'text'
+			elif postgres_datatype.lower().strip() == 'integer':
+				return 'integer'
+			elif postgres_datatype.lower().strip() == 'numeric':
+				return 'real'
+			else:
+				return 'UNKNOWN'
+
 		else:
 			return postgres_datatype
 
@@ -789,6 +871,28 @@ class schemawiz:
     
 		return sql
 
+	def guess_sqlite_ddl(self,usetablename=''):
+		self.dbthings.connect_local_db(database_type.sqlite)
+		if not self.analyzed:
+			self.analyze_csvfile(database_type.sqlite)
+		if usetablename == '':
+			tablename = self.gettablename()
+		else:
+			tablename = usetablename
+
+		self.lastcall_tablename = tablename
+
+		fldcommentsql = '' 
+		sql = '/* DROP TABLE IF EXISTS ' + tablename + '; */\n'
+
+		sql += 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
+		for i in range(0,len(self.column_names)):
+			sql += '\t' + self.column_names[i] + ' ' + self.column_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ,\n'
+
+		sql = sql[:-2] + '\n);\n\n'
+
+		return sql
+
 	def guess_postgres_ddl(self,usetablename=''):
 		
 		self.dbthings.connect_local_db(database_type.Postgres)
@@ -849,10 +953,12 @@ if __name__ == '__main__':
 	csvfilename ='station_years.tsv' #input('csvfile to read? ')
 
 	obj = schemawiz()
-	#obj.force_delimiter = '\t'
 	#obj.loadcsvfile(csvfilename)
-	#obj.createload_postgres_from_csv(csvfilename,'canweather.station_years','z.canweather.station_years.ddl')
 	
+	#obj.createload_sqlite_from_csv(csvfilename,'station_years','sqlite.station_years.ddl')
+	
+	#print(obj.dbthings.sqlite_db.queryone('SELECT COUNT(*) FROM station_years'))
+
 	#print("delimiter= '" + obj.delimiter + "' ")
 		
 	#ddl = obj.guess_postgres_ddl('canweather.station_events')

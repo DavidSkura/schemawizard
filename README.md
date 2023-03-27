@@ -1,6 +1,6 @@
 # schemawizard
 
-Reads a csv and generates a table design for Postgres, MySQL or BigQuery
+Reads a csv and generates a table design for Postgres, MySQL, sqlite or BigQuery
 
 ### install with pip
 pip install schemawizard-package
