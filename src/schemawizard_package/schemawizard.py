@@ -887,7 +887,7 @@ class schemawiz:
 
 		sql += 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
 		for i in range(0,len(self.column_names)):
-			sql += '\t' + self.column_names[i] + ' ' + self.column_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ,\n'
+			sql += '\t' + self.column_names[i] + ' ' + self.sqlite_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ,\n'
 
 		sql = sql[:-2] + '\n);\n\n'
 
