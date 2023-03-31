@@ -12,12 +12,13 @@ from garbledave_package.garbledave import garbledave
 def main():
 	obj = schemawiz()
 
-"""
-	csvfilename ='a.csv' 
+	csvfilename ='postgres_data.tsv' 
 	obj.loadcsvfile(csvfilename)
 	
-	obj.createload_sqlite_from_csv(csvfilename,'tableb','sqlite.tablea.ddl')
+	obj.dbthings.sqlite_db.load_csv_to_table(csvfilename,'tablec',True,'~')
 	
+	sys.exit(0)
+"""	
 	#print(obj.dbthings.sqlite_db.queryone('SELECT COUNT(*) FROM station_years'))
 
 	#print("delimiter= '" + obj.delimiter + "' ")
@@ -579,6 +580,7 @@ class schemawiz:
 				#self.logger('line size is ' + str(self.datalinesize) + ' ytes')
 				#self.logger('file size is ' + str(file_stats.st_size) + ' bytes')
 
+
 				self.get_column_names()
 				self.get_column_types(thisdatabase_type)
 				self.analyzed = True
@@ -720,7 +722,8 @@ class schemawiz:
 			if thisdatabase_type == database_type.Postgres:
 				self.column_datatypes.append(found_datatypes[self.column_names[k]])
 			else:
-				self.column_datatypes.append(self.translate_dt(database_type.MySQL,found_datatypes[self.column_names[k]]))
+				x = self.translate_dt(database_type.MySQL,found_datatypes[self.column_names[k]])
+				self.column_datatypes.append(x)
 
 			self.column_sample.append(found_datavalues[self.column_names[k]].replace('"',''))
 			self.column_dateformats.append(found_datefomat[self.column_names[k]])
@@ -762,14 +765,12 @@ class schemawiz:
 			else:
 				return postgres_datatype
 		elif targettype == database_type.sqlite:
-			if postgres_datatype.lower().strip() == 'text':
-				return 'text'
-			elif postgres_datatype.lower().strip() == 'integer':
+			if postgres_datatype.lower().strip() == 'integer':
 				return 'integer'
 			elif postgres_datatype.lower().strip() == 'numeric':
 				return 'real'
 			else:
-				return 'UNKNOWN'
+				return 'text'
 
 		else:
 			return postgres_datatype
@@ -811,21 +812,8 @@ class schemawiz:
 				delimiter_guess = '\t'
 			elif first_row.find(',') > -1:
 				delimiter_guess = ','
-			elif first_row.find('~') > -1:
-				delimiter_guess = '~'
 			else:
-				hdrs = first_row 
-				chars_in_hdr = {}
-				chars_in_hdr = self.count_chars(hdrs,"'"+ 'abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"')
-
-				currentchar = 'no idea'
-				currentvalue = 0
-				for ch in chars_in_hdr:
-					if chars_in_hdr[ch] > currentvalue:
-						currentchar = ch
-						currentvalue = chars_in_hdr[ch]
-
-				delimiter_guess = currentchar
+				delimiter_guess = '~'
 
 		return delimiter_guess
 
