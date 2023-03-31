@@ -9,6 +9,66 @@ from postgresdave_package.postgresdave import postgres_db
 from mysqldave_package.mysqldave import mysql_db 
 from garbledave_package.garbledave import garbledave 
 
+def main():
+	csvfilename ='a.csv' 
+	obj = schemawiz()
+	obj.loadcsvfile(csvfilename)
+	
+	obj.createload_sqlite_from_csv(csvfilename,'tableb','sqlite.tablea.ddl')
+	
+	#print(obj.dbthings.sqlite_db.queryone('SELECT COUNT(*) FROM station_years'))
+
+	#print("delimiter= '" + obj.delimiter + "' ")
+		
+	#ddl = obj.guess_postgres_ddl('canweather.station_events')
+	
+"""
+	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
+	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
+	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
+	print(ddl)
+	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
+	
+	
+	print(obj.dbthings.postgres_db.does_table_exist('newtbl'))
+
+	# add any specific known date formats
+	#obj.dbthings.postgres_date_formats.append('Mon DD,YY')
+	if csvfilename != '':
+		obj.loadcsvfile(csvfilename)
+
+
+
+	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
+	print(obj.guess_mysql_ddl('sample_csv'))
+	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
+
+
+	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
+	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
+	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
+	print(ddl)
+	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
+
+
+
+	print('/* BigQuery DDL - BEGIN ----- schemawiz().guess_BigQuery_ddl() ----- */ \n')
+	print(obj.guess_BigQuery_ddl('watchful-lotus-364517','dave'))
+	print('\n/* BigQuery DDL - END   ----- ----- ----- ----- */ \n')
+
+
+	
+	print('/* BigQuery External DDL - BEGIN ----- schemawiz().guess_BigQueryExternal_ddl() ----- */ \n')
+	print(obj.guess_BigQueryExternal_ddl('watchful-lotus-364517','dave'))
+	print('\n/* BigQuery External DDL - END   ----- ----- ----- ----- */ \n')
+
+	print('/* BigQuery DDL - BEGIN ----- schemawiz().guess_BigQuery_ddl() ----- */ \n')
+	print(obj.guess_BigQuery_ddl('watchful-lotus-364517','dave'))
+	print('\n/* BigQuery DDL - END   ----- ----- ----- ----- */ \n')
+
+
+	"""
+
 class database_type:
 	Postgres = 1
 	MySQL = 2
@@ -950,62 +1010,4 @@ class schemawiz:
 
 
 if __name__ == '__main__':
-	csvfilename ='station_years.tsv' #input('csvfile to read? ')
-
-	obj = schemawiz()
-	#obj.loadcsvfile(csvfilename)
-	
-	#obj.createload_sqlite_from_csv(csvfilename,'station_years','sqlite.station_years.ddl')
-	
-	#print(obj.dbthings.sqlite_db.queryone('SELECT COUNT(*) FROM station_years'))
-
-	#print("delimiter= '" + obj.delimiter + "' ")
-		
-	#ddl = obj.guess_postgres_ddl('canweather.station_events')
-	
-"""
-	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
-	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
-	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
-	print(ddl)
-	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
-	
-	
-	print(obj.dbthings.postgres_db.does_table_exist('newtbl'))
-
-	# add any specific known date formats
-	#obj.dbthings.postgres_date_formats.append('Mon DD,YY')
-	if csvfilename != '':
-		obj.loadcsvfile(csvfilename)
-
-
-
-	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
-	print(obj.guess_mysql_ddl('sample_csv'))
-	print('/* MySQL DDL - END   ----- ----- ----- ----- */ \n')
-
-
-	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
-	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
-	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
-	print(ddl)
-	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
-
-
-
-	print('/* BigQuery DDL - BEGIN ----- schemawiz().guess_BigQuery_ddl() ----- */ \n')
-	print(obj.guess_BigQuery_ddl('watchful-lotus-364517','dave'))
-	print('\n/* BigQuery DDL - END   ----- ----- ----- ----- */ \n')
-
-
-	
-	print('/* BigQuery External DDL - BEGIN ----- schemawiz().guess_BigQueryExternal_ddl() ----- */ \n')
-	print(obj.guess_BigQueryExternal_ddl('watchful-lotus-364517','dave'))
-	print('\n/* BigQuery External DDL - END   ----- ----- ----- ----- */ \n')
-
-	print('/* BigQuery DDL - BEGIN ----- schemawiz().guess_BigQuery_ddl() ----- */ \n')
-	print(obj.guess_BigQuery_ddl('watchful-lotus-364517','dave'))
-	print('\n/* BigQuery DDL - END   ----- ----- ----- ----- */ \n')
-
-
-	"""
+	main()
