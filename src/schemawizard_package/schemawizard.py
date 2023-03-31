@@ -10,8 +10,10 @@ from mysqldave_package.mysqldave import mysql_db
 from garbledave_package.garbledave import garbledave 
 
 def main():
-	csvfilename ='a.csv' 
 	obj = schemawiz()
+
+"""
+	csvfilename ='a.csv' 
 	obj.loadcsvfile(csvfilename)
 	
 	obj.createload_sqlite_from_csv(csvfilename,'tableb','sqlite.tablea.ddl')
@@ -22,7 +24,6 @@ def main():
 		
 	#ddl = obj.guess_postgres_ddl('canweather.station_events')
 	
-"""
 	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
 	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
 	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
