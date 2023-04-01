@@ -11,26 +11,17 @@ from garbledave_package.garbledave import garbledave
 
 def main():
 	obj = schemawiz()
+	#obj.loadcsvfile('sample7.csv')
+	#print(obj.guess_mysql_ddl('restored_sample177'))
+	
+	#tbl = obj.createload_mysql_from_csv('sample7.csv','restored_sample')
 
-	csvfilename ='postgres_data.tsv' 
-	obj.loadcsvfile(csvfilename)
-	
-	obj.dbthings.sqlite_db.load_csv_to_table(csvfilename,'tablec',True,'~')
-	
-	sys.exit(0)
 """	
-	#print(obj.dbthings.sqlite_db.queryone('SELECT COUNT(*) FROM station_years'))
-
-	#print("delimiter= '" + obj.delimiter + "' ")
-		
-	#ddl = obj.guess_postgres_ddl('canweather.station_events')
-	
-	print('/* Postgres DDL - BEGIN ----- schemawiz().guess_postgres_ddl() ----- */ \n')
+	csvfilename = 'a.csv'
 	ddl = obj.guess_postgres_ddl(csvfilename.replace('.','_'))
-	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
 	print(ddl)
+	print('/* Tablename used : ' + obj.lastcall_tablename + ' */ \n')
 	print('/* Postgres DDL - END   ----- ----- ----- ----- */ \n')
-	
 	
 	print(obj.dbthings.postgres_db.does_table_exist('newtbl'))
 
@@ -38,8 +29,6 @@ def main():
 	#obj.dbthings.postgres_date_formats.append('Mon DD,YY')
 	if csvfilename != '':
 		obj.loadcsvfile(csvfilename)
-
-
 
 	print('/* MySQL DDL - BEGIN ----- schemawiz().guess_mysql_ddl() ----- */ \n')
 	print(obj.guess_mysql_ddl('sample_csv'))
@@ -203,6 +192,15 @@ class dbthinger:
 			except:
 					return False
 
+	def is_a_float(self,prm):
+			try:
+				if float(prm) == float(prm):
+					return True
+				else:
+					return False
+			except:
+					return False
+
 	def match_timestamp_type(self,timestamp_string,thisdatabase_type):	
 		if thisdatabase_type == database_type.Postgres:
 			for i in range(0,len(self.postgres_timestamp_formats)):
@@ -292,6 +290,9 @@ class dbthinger:
 		else:
 			return -1
 
+	def match_float_type(self,floatvalue):
+		return self.is_a_float(floatvalue)
+
 	def match_integer_type(self,intvalue):
 		return self.is_an_int(intvalue)
 
@@ -349,6 +350,7 @@ class schemawiz:
 		self.column_names = []
 		self.column_datatypes = []
 		self.BigQuery_datatypes = []
+		self.mysql_datatypes = []
 		self.sqlite_datatypes = []
 		self.column_sample = []
 		self.column_dateformats = []
@@ -499,7 +501,6 @@ class schemawiz:
 				f.close()
 			print(ddl)
 			self.dbthings.mysql_db.execute(ddl)
-
 			self.dbthings.mysql_db.load_csv_to_table(csvfilename,tablename,True,delimiter)
 
 			rowcount = self.dbthings.mysql_db.queryone('SELECT COUNT(*) FROM ' + tablename)
@@ -678,7 +679,11 @@ class schemawiz:
 
 		elif alphacount == 0 and deccount == 1:
 			# 123.123232222
-			lookslike = 'numeric'
+			if self.dbthings.match_float_type(data):
+				lookslike = 'numeric'
+			else:
+				lookslike = 'text'
+
 
 		elif self.dbthings.match_integer_type(data) :
 			# 123
@@ -719,14 +724,12 @@ class schemawiz:
 							found_datatypes[self.column_names[j]] == 'text'
 
 		for k in range(0,len(self.column_names)):
-			if thisdatabase_type == database_type.Postgres:
-				self.column_datatypes.append(found_datatypes[self.column_names[k]])
-			else:
-				x = self.translate_dt(database_type.MySQL,found_datatypes[self.column_names[k]])
-				self.column_datatypes.append(x)
-
 			self.column_sample.append(found_datavalues[self.column_names[k]].replace('"',''))
 			self.column_dateformats.append(found_datefomat[self.column_names[k]])
+
+			self.column_datatypes.append(found_datatypes[self.column_names[k]])
+			self.mysql_datatypes.append(self.translate_dt(database_type.MySQL,found_datatypes[self.column_names[k]]))
+
 			self.BigQuery_datatypes.append(self.translate_dt(database_type.BigQuery,found_datatypes[self.column_names[k]]))
 			self.sqlite_datatypes.append(self.translate_dt(database_type.sqlite,found_datatypes[self.column_names[k]]))
 
@@ -848,8 +851,8 @@ class schemawiz:
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + self.BigQuery_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ' 
 			
-			if self.column_datatypes[i].strip().lower() == 'date' or self.column_datatypes[i].strip().lower() == 'timestamp':
-				sql += "OPTIONS (description='" + self.column_datatypes[i].strip().lower() + " format in csv [" + self.column_dateformats[i] + "]')"
+			if self.BigQuery_datatypes[i].strip().lower() == 'date' or self.BigQuery_datatypes[i].strip().lower() == 'timestamp':
+				sql += "OPTIONS (description='" + self.BigQuery_datatypes[i].strip().lower() + " format in csv [" + self.column_dateformats[i] + "]')"
 
 			sql += ',\n'
 
@@ -893,8 +896,8 @@ class schemawiz:
 		for i in range(0,len(self.column_names)):
 			sql += '\t' + self.column_names[i] + ' ' + self.BigQuery_datatypes[i] + ' \t\t/* eg. ' + self.column_sample[i] + ' */ ' 
 			
-			if self.column_datatypes[i].strip().lower() == 'date' or self.column_datatypes[i].strip().lower() == 'timestamp':
-				sql += "OPTIONS (description='" + self.column_datatypes[i].strip().lower() + " format in csv [" + self.column_dateformats[i] + "]')"
+			if self.BigQuery_datatypes[i].strip().lower() == 'date' or self.BigQuery_datatypes[i].strip().lower() == 'timestamp':
+				sql += "OPTIONS (description='" + self.BigQuery_datatypes[i].strip().lower() + " format in csv [" + self.column_dateformats[i] + "]')"
 
 			sql += ',\n'
 
@@ -982,13 +985,13 @@ class schemawiz:
 			tablename = usetablename
 		self.lastcall_tablename = tablename
 
-		sql = 'DROP TABLE IF EXISTS ' + tablename + ';\n'
+		sql = '/* DROP TABLE IF EXISTS ' + tablename + '; */\n'
 
-		sql += 'CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
+		sql += ' CREATE TABLE IF NOT EXISTS ' + tablename + '(\n'
 		for i in range(0,len(self.column_names)):
-			sql += '\t' + self.column_names[i] + ' ' + str(self.column_datatypes[i]) + ' \t\t/* eg. ' + self.column_sample[i] + ' */ '
-			if str(self.column_datatypes[i]).strip().lower() == 'date' or str(self.column_datatypes[i]).strip().lower() == 'timestamp':
-				sql += 'COMMENT "' + str(self.column_datatypes[i]).strip().lower() + ' format in csv [' + self.column_dateformats[i] + ']" '
+			sql += '\t' + self.column_names[i] + ' ' + str(self.mysql_datatypes[i]) + ' \t\t/* eg. ' + self.column_sample[i] + ' */ '
+			if str(self.mysql_datatypes[i]).strip().lower() == 'date' or str(self.mysql_datatypes[i]).strip().lower() == 'timestamp':
+				sql += 'COMMENT "' + str(self.mysql_datatypes[i]).strip().lower() + ' format in csv [' + self.column_dateformats[i] + ']" '
 			sql += ' ,\n'
 
 		sql = sql[:-2] + '\n) \n'
