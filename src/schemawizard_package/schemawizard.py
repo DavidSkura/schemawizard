@@ -11,10 +11,10 @@ from garbledave_package.garbledave import garbledave
 
 def main():
 	obj = schemawiz()
-	#obj.loadcsvfile('sample7.csv')
-	#print(obj.guess_mysql_ddl('restored_sample177'))
+	obj.loadcsvfile('projects.tsv')
+	#print(obj.guess_postgres_ddl())
 	
-	#tbl = obj.createload_mysql_from_csv('sample7.csv','restored_sample')
+	tbl = obj.createload_postgres_from_csv('projects.tsv','gcp_projects')
 
 """	
 	csvfilename = 'a.csv'
@@ -398,7 +398,9 @@ class schemawiz:
 		return_value = ''
 
 		self.loadcsvfile(csvfilename)
+		print(csvfilename)
 		ddl = self.guess_sqlite_ddl(sztablename)
+		
 		delimiter = self.lastcall_delimiter()
 		if sztablename == '':
 			tablename = self.lastcall_tablename
@@ -559,36 +561,29 @@ class schemawiz:
 
 		else:
 
-			try:
-				self.logger('Checking file size for ' + self.csvfilename + '\n')
-				file_stats = os.stat(self.csvfilename)
+			self.logger('Checking file size for ' + self.csvfilename + '\n')
+			file_stats = os.stat(self.csvfilename)
 
-				linecount = 0
-				total_linesize = 0
-				with open(self.csvfilename) as f:
-					for line in f:
-						linecount += 1
-						if linecount != 1:
-							total_linesize += self.utf8len(line)
-						if linecount == 11:
-							self.datalinesize = total_linesize/10
+			linecount = 0
+			total_linesize = 0
+			with open(self.csvfilename) as f:
+				for line in f:
+					linecount += 1
+					if linecount != 1:
+						total_linesize += self.utf8len(line)
+					if linecount == 11:
+						self.datalinesize = total_linesize/10
 
-						self.SomeFileContents.append(line)
-						if (linecount>100):
-							break
-				
-				#self.logger('file has ' + str(len(self.SomeFileContents)) + ' lines')
-				#self.logger('line size is ' + str(self.datalinesize) + ' ytes')
-				#self.logger('file size is ' + str(file_stats.st_size) + ' bytes')
-
-
-				self.get_column_names()
-				self.get_column_types(thisdatabase_type)
-				self.analyzed = True
-			except Exception as e:
+					self.SomeFileContents.append(line)
+					if (linecount>100):
+						break
 			
-				print(str(e))
-				sys.exit(0)
+			#self.logger('file has ' + str(len(self.SomeFileContents)) + ' lines')
+			#self.logger('line size is ' + str(self.datalinesize) + ' ytes')
+			#self.logger('file size is ' + str(file_stats.st_size) + ' bytes')
+			self.get_column_names()
+			self.get_column_types(thisdatabase_type)
+			self.analyzed = True
 
 	def get_just_filename(self):
 		justfilename=''
@@ -684,10 +679,8 @@ class schemawiz:
 			else:
 				lookslike = 'text'
 
-
 		elif self.dbthings.match_integer_type(data) :
-			# 123
-			lookslike = 'integer'
+			lookslike = 'bigint'
 
 		else:
 			lookslike = 'text'
@@ -695,13 +688,11 @@ class schemawiz:
 		return lookslike,dtformat
 
 	def get_column_types(self,thisdatabase_type):
-
 		found_datatypes = {}
 		found_datavalues = {}
 		found_datefomat = {}
 		for i in range(1,len(self.SomeFileContents)):
 			dataline = self.SomeFileContents[i].strip().split(self.delimiter)
-			#print(dataline)
 			for j in range(0,len(dataline)):
 
 				thisdatatype,dtformat = self.get_datatype(dataline[j],thisdatabase_type)
@@ -756,7 +747,7 @@ class schemawiz:
 				return 'DATE'
 			elif postgres_datatype.lower().strip() == 'timestamp':
 				return 'TIMESTAMP'
-			elif postgres_datatype.lower().strip() == 'integer':
+			elif postgres_datatype.lower().strip() == 'integer' or postgres_datatype.lower().strip() == 'bigint':
 				return 'INT64'
 			elif postgres_datatype.lower().strip() == 'numeric':
 				return 'FLOAT64'
@@ -768,7 +759,7 @@ class schemawiz:
 			else:
 				return postgres_datatype
 		elif targettype == database_type.sqlite:
-			if postgres_datatype.lower().strip() == 'integer':
+			if postgres_datatype.lower().strip() == 'integer' or postgres_datatype.lower().strip() == 'bigint':
 				return 'integer'
 			elif postgres_datatype.lower().strip() == 'numeric':
 				return 'real'
