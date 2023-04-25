@@ -9,12 +9,19 @@ from postgresdave_package.postgresdave import postgres_db
 from mysqldave_package.mysqldave import mysql_db 
 from garbledave_package.garbledave import garbledave 
 
+"""
+************************
+NEED TO HANDLE double quote fields
+
+************************
+
+"""
 def main():
 	obj = schemawiz()
-	obj.loadcsvfile('projects.tsv')
+	#obj.loadcsvfile('octqueries.csv')
 	#print(obj.guess_postgres_ddl())
 	
-	tbl = obj.createload_postgres_from_csv('projects.tsv','gcp_projects')
+	#tbl = obj.createload_postgres_from_csv('projects.tsv','gcp_projects')
 
 """	
 	csvfilename = 'a.csv'
@@ -695,7 +702,11 @@ class schemawiz:
 			dataline = self.SomeFileContents[i].strip().split(self.delimiter)
 			for j in range(0,len(dataline)):
 
-				thisdatatype,dtformat = self.get_datatype(dataline[j],thisdatabase_type)
+				if self.column_names[j].lower().endswith('_text'):
+					thisdatatype = 'text'
+					dtformat = ''
+				else:
+					thisdatatype,dtformat = self.get_datatype(dataline[j],thisdatabase_type)
 				#print(thisdatatype)
 				if self.column_names[j] not in found_datatypes:
 					found_datatypes[self.column_names[j]] = thisdatatype
