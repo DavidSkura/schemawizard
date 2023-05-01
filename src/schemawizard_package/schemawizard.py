@@ -9,16 +9,9 @@ from postgresdave_package.postgresdave import postgres_db
 from mysqldave_package.mysqldave import mysql_db 
 from garbledave_package.garbledave import garbledave 
 
-"""
-************************
-NEED TO HANDLE double quote fields
-
-************************
-
-"""
 def main():
 	obj = schemawiz()
-	#obj.loadcsvfile('octqueries.csv')
+	#obj.loadcsvfile('testcase1.csv')
 	#print(obj.guess_postgres_ddl())
 	
 	#tbl = obj.createload_postgres_from_csv('projects.tsv','gcp_projects')
@@ -352,6 +345,7 @@ class schemawiz:
 		self.force_delimiter = ''
 		self.lastcall_tablename = ''
 		self.delimiter = ''
+		self.delimiter_replace = '^~^'
 		self.logging_on = False
 		self.SomeFileContents = []
 		self.column_names = []
@@ -589,7 +583,9 @@ class schemawiz:
 			#self.logger('line size is ' + str(self.datalinesize) + ' ytes')
 			#self.logger('file size is ' + str(file_stats.st_size) + ' bytes')
 			self.get_column_names()
+
 			self.get_column_types(thisdatabase_type)
+			
 			self.analyzed = True
 
 	def get_just_filename(self):
@@ -693,24 +689,45 @@ class schemawiz:
 			lookslike = 'text'
 
 		return lookslike,dtformat
+	def handledblquotes(self,rowwithquotes):
+		newstr = ''
+		quotecount = 0
+		cvtmode = False
+		for i in range (0,len(rowwithquotes)-1):
+			if rowwithquotes[i] == '"':
+				quotecount += 1
+			
+			if (quotecount % 2) == 1:
+				cvtmode = True 
+			else:
+				cvtmode = False
+
+			if cvtmode and rowwithquotes[i] == self.delimiter:
+				newstr += self.delimiter_replace
+			elif rowwithquotes[i] != '"':
+				newstr += rowwithquotes[i]
+			
+		return newstr
 
 	def get_column_types(self,thisdatabase_type):
 		found_datatypes = {}
 		found_datavalues = {}
 		found_datefomat = {}
 		for i in range(1,len(self.SomeFileContents)):
-			dataline = self.SomeFileContents[i].strip().split(self.delimiter)
+			cvted_str = self.handledblquotes(self.SomeFileContents[i])
+			dataline = cvted_str.strip().split(self.delimiter)
 			for j in range(0,len(dataline)):
+				fld = dataline[j].replace(self.delimiter_replace,self.delimiter)
 
 				if self.column_names[j].lower().endswith('_text'):
 					thisdatatype = 'text'
 					dtformat = ''
 				else:
-					thisdatatype,dtformat = self.get_datatype(dataline[j],thisdatabase_type)
+					thisdatatype,dtformat = self.get_datatype(fld,thisdatabase_type)
 				#print(thisdatatype)
 				if self.column_names[j] not in found_datatypes:
 					found_datatypes[self.column_names[j]] = thisdatatype
-					found_datavalues[self.column_names[j]] = dataline[j]
+					found_datavalues[self.column_names[j]] = fld
 					found_datefomat[self.column_names[j]]	= dtformat
 				else:
 					if found_datatypes[self.column_names[j]] == 'date' and thisdatatype =='date' and found_datefomat[self.column_names[j]] != dtformat:
@@ -790,20 +807,17 @@ class schemawiz:
 
 	def clean_column_name(self,col_name):
 
-		new_column_name = col_name
-		chardict = self.count_chars(col_name)
-		alphacount = self.count_alpha(chardict)
-		nbrcount = self.count_nbr(chardict)
-		if ((len(col_name)-2) == (alphacount + nbrcount)) and '1234567890'.find(col_name[:1]) == -1:
-			new_column_name = self.clean_text(col_name) # .replace('"','').strip()
-
+		new_column_name = ''
+		for i in range(0,len(col_name)):
+			if 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'.find(col_name[i]) > -1:
+				new_column_name += col_name[i]
 
 		return new_column_name
 
 	def get_column_names(self):
 		self.delimiter = self.GuessDelimiter(self.SomeFileContents[0])
 		self.logger('file delimiter is ' + self.delimiter)
-		self.column_names = self.SomeFileContents[0].strip().split(self.delimiter)
+		self.column_names = self.SomeFileContents[0].replace(' ','_').strip().split(self.delimiter)
 		self.logger('Column Names are ' + str(self.column_names))
 
 		for i in range(0,len(self.column_names)):
