@@ -11,8 +11,8 @@ from garbledave_package.garbledave import garbledave
 
 def main():
 	obj = schemawiz()
-	#obj.loadcsvfile('testcase1.csv')
-	#print(obj.guess_postgres_ddl())
+	obj.loadcsvfile('testcase1.csv')
+	print(obj.guess_sqlite_ddl('testcase1'))
 	
 	#tbl = obj.createload_postgres_from_csv('projects.tsv','gcp_projects')
 
@@ -806,18 +806,18 @@ class schemawiz:
 			return text
 
 	def clean_column_name(self,col_name):
-
+		col = col_name.replace(' ','_')
 		new_column_name = ''
-		for i in range(0,len(col_name)):
-			if 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'.find(col_name[i]) > -1:
-				new_column_name += col_name[i]
+		for i in range(0,len(col)):
+			if 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'.find(col[i]) > -1:
+				new_column_name += col[i]
 
 		return new_column_name
 
 	def get_column_names(self):
 		self.delimiter = self.GuessDelimiter(self.SomeFileContents[0])
 		self.logger('file delimiter is ' + self.delimiter)
-		self.column_names = self.SomeFileContents[0].replace(' ','_').strip().split(self.delimiter)
+		self.column_names = self.SomeFileContents[0].strip().split(self.delimiter)
 		self.logger('Column Names are ' + str(self.column_names))
 
 		for i in range(0,len(self.column_names)):
