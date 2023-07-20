@@ -11,10 +11,10 @@ from garbledave_package.garbledave import garbledave
 
 def main():
 	obj = schemawiz()
-	obj.loadcsvfile('testcase1.csv')
-	print(obj.guess_sqlite_ddl('testcase1'))
-	
-	#tbl = obj.createload_postgres_from_csv('projects.tsv','gcp_projects')
+	obj.loadcsvfile('servers.csv')
+	#tbl = obj.createload_sqlite_from_csv('servers.csv','servers')
+	#obj.justload_sqlite_from_csv('servers.csv','servers',True)
+	print(obj.guess_sqlite_ddl('servers'))
 
 """	
 	csvfilename = 'a.csv'
