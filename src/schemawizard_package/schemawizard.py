@@ -11,10 +11,10 @@ from garbledave_package.garbledave import garbledave
 
 def main():
 	obj = schemawiz()
-	obj.loadcsvfile('servers.csv')
-	#tbl = obj.createload_sqlite_from_csv('servers.csv','servers')
+	#obj.loadcsvfile('test.csv')
+	#tbl = obj.createload_mysql_from_csv('test.csv','test3')
 	#obj.justload_sqlite_from_csv('servers.csv','servers',True)
-	print(obj.guess_sqlite_ddl('servers'))
+	#print(obj.guess_sqlite_ddl('servers'))
 
 """	
 	csvfilename = 'a.csv'
@@ -743,6 +743,11 @@ class schemawiz:
 							found_datatypes[self.column_names[j]] == 'text'
 
 		for k in range(0,len(self.column_names)):
+			if self.column_names[k] not in found_datavalues:
+				found_datavalues[self.column_names[k]] = ''
+				found_datefomat[self.column_names[k]] = ''
+				found_datatypes[self.column_names[k]] = 'text'
+			
 			self.column_sample.append(found_datavalues[self.column_names[k]].replace('"',''))
 			self.column_dateformats.append(found_datefomat[self.column_names[k]])
 
