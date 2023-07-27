@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "schemawizard_package"
-version = "2.5.1"
+version = "2.5.2"
 dependencies = [
   'postgresdave_package >= 1.8.0',
   'mysqldave_package >= 1.5.0',
